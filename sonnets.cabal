@@ -1,6 +1,6 @@
 name:                sonnets
-version:             0.1.0.0
--- synopsis:
+version:             0.1.0
+synopsis:            Count Shakespearean rhyme pairs
 -- description:
 homepage:            https://github.com/kmein/sonnets#readme
 license:             BSD3
