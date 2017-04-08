@@ -1,6 +1,8 @@
 module Main where
 
-import Data.List (sortBy)
+import Debug.Trace
+import Data.Function (on)
+import Data.List (sortBy, sortOn, groupBy)
 import Data.List.Split (splitOn)
 import Data.Maybe (mapMaybe)
 import Data.Ord (Down(..), comparing)
@@ -10,6 +12,11 @@ import qualified Data.Map as Map (Map, empty, insertWith, toList)
 
 _SONNET_PATH = "sonnets.txt"
 
+choose :: Int -> [a] -> [[a]]
+choose 0 _ = [[]]
+choose k [] = []
+choose k (x:xs) = map (x :) (choose (k - 1) xs) ++ choose k xs
+
 removeEvery :: Int -> [a] -> [a]
 removeEvery n = foldr step [] . zip [1 ..]
   where
@@ -18,21 +25,26 @@ removeEvery n = foldr step [] . zip [1 ..]
             then acc
             else x : acc
 
-rhymes :: [String] -> [UPair String]
-rhymes ls = mapMaybe getPair rhymingPairs
+schemeToIndices :: String -> [[Int]]
+schemeToIndices = map (map fst) . groupBy ((==) `on` snd) . sortOn snd . zip [0..]
+
+rhymes :: String -> [String] -> [UPair String]
+rhymes scheme ls = concatMap getPair rhymingPairs
   where
-    rhymingPairs = [(0, 2), (1, 3), (4, 6), (5, 7), (8, 10), (9, 11), (12, 13)]
-    getPair (a, b) =
-        ( # ) <$> fmap rhyme (ls `atMay` a) <*> fmap rhyme (ls `atMay` b)
+    rhymingPairs = schemeToIndices scheme
+    getPair :: [Int] -> [UPair String]
+    getPair =
+        map (\[x, y] -> x# y) .
+        choose 2 . mapMaybe (\i -> fmap rhyme (ls `atMay` i))
     rhyme = takeWhile (not . flip elem ".,:;!?") . last . words
 
-stats :: [UPair String] -> Map.Map (UPair String) Int
+stats :: Ord a => [a] -> Map.Map a Int
 stats = foldr (\p -> Map.insertWith (+) p 1) Map.empty
 
 main :: IO ()
 main = do
     sonns <- getSonnets _SONNET_PATH
-    let rhymingStats = stats $ concatMap rhymes sonns
+    let rhymingStats = stats $ concatMap (rhymes "ababcdcdefefgg") sonns
     putStrLn $ unlines $ formatMap rhymingStats
   where
     getSonnets path = do
